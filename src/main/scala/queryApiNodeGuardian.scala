@@ -3,24 +3,45 @@ import java.util.concurrent.TimeoutException
 import akka.actor.SupervisorStrategy.{Escalate, Restart, Stop}
 import akka.actor._
 import akka.routing.BalancingPool
+import akka.util.Timeout
+import akka.cluster.{Member, Metric, NodeMetrics, Cluster}
+import akka.cluster.ClusterEvent._
+
+import scala.concurrent.Future
+//import scala.concurrent.ExecutionContext.Implicits.global
+import scala.math._
+import scala.util.control.NonFatal
+import scala.concurrent.duration._
+
+import org.apache.spark.SparkConf
+import org.apache.spark.streaming._
+
+import akka.cluster.seed._
 
 sealed trait LifeCycleEvent extends Serializable
 case object OutputStreamInitialized extends LifeCycleEvent
 case object NodeInitialized extends LifeCycleEvent
 
 
-final class QueryApiNodeGuardian(conf :QueryApiConfig) extends Actor with ActorLogging {
+final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with ActorLogging {
 
   import SupervisorStrategy._
   import akka.pattern.gracefulStop
-  //import context.dispatcher
-  val config=conf
-  println("name of actorsystem in node guardian"+context.system.name)
+
   val cluster = Cluster(context.system)
 
+  protected val sparkConf = new SparkConf().setAppName(getClass.getSimpleName)
+    .setMaster(config.sparkMaster)
+    .set("spark.cassandra.connection.host", config.cassandraHosts)
+    .set("spark.cleaner.ttl", config.sparkCleanerTtl.toString)
+    .set("spark.mesos.executor.home", config.sparkMesosExecutorHome)
+
+  /** Creates the Spark Streaming context. */
+  protected val ssc = new StreamingContext(sparkConf, Milliseconds(config.sparkStreamingBatchInterval))
 
   /** subscribe to cluster changes, re-subscribe when restart. */
   override def preStart(): Unit = {
+    ZookeeperClusterSeed(context.system).join()
     cluster.subscribe(self, classOf[ClusterDomainEvent])
     log.info("Starting at {}", cluster.selfAddress)
   }
@@ -67,6 +88,11 @@ final class QueryApiNodeGuardian(conf :QueryApiConfig) extends Actor with ActorL
   def initialize(): Unit = {
     log.info(s"Node is transitioning from 'uninitialized' to 'initialized'")
     context.system.eventStream.publish(NodeInitialized)
+
+    ssc.checkpoint(config.sparkCheckpointDir)
+    ssc.start()
+
+    //context become initialized
   }
 
   /*protected def gracefulShutdown(listener: ActorRef): Unit = {
@@ -84,18 +110,18 @@ final class QueryApiNodeGuardian(conf :QueryApiConfig) extends Actor with ActorL
         Future(false)
     }*/
 
-  cluster.joinSeedNodes(Vector(cluster.selfAddress))
+  //cluster.joinSeedNodes(Vector(cluster.selfAddress))
 
   // launch the kafka actors
   val router = context.actorOf(BalancingPool(1).props(
-    Props(new KafkaPublisherActor(config))), "kafka-publisher")
+    Props(new SparkQueryActor(config,ssc))), "spark-query")
 
   // launch the http actors
   cluster registerOnMemberUp {
     /* As http data is received, publishes to Kafka. */
     log.info(s"name of the actorsystem for http receiver {}",context.system.name)
     context.actorOf(BalancingPool(1).props(
-      Props(new HttpReceiverActor(router,conf))), "http-receiver")
+      Props(new HttpQueryActor(router,config))), "http-query")
 
     log.info("Starting data ingestion on {}.", cluster.selfAddress)
   }
