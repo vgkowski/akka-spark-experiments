@@ -21,11 +21,26 @@ class QueryApiConfig(path :String) {
   val httpTimeout = httpConfig.getInt("timeout")
 
   val sparkConfig = config.getConfig("spark")
+  val sparkJars = sparkConfig.getString("jars")
   val sparkMaster = sparkConfig.getString("master")
-  val sparkCleanerTtl = sparkConfig.getInt("cleaner-ttl")
+  val sparkMesosExecutorHome= sparkConfig.getString("mesos.executor-home")
+  val sparkDriverCores = sparkConfig.getString("driver-cores")
+  val sparkDriverMemory = sparkConfig.getString("driver-memory")
+  val sparkMesosCoarse = sparkConfig.getString("mesos.coarse")
+  val sparkMesosCoresMax : Option[String]= sparkMesosCoarse match{
+    case "true" => Some(sparkConfig.getString("mesos.cores-max"))
+    case "false" => None
+  }
+  val sparkMesosExecutorCores : Option[String]= sparkMesosCoarse match{
+    case "false" => Some(sparkConfig.getString("mesos.executor-cores"))
+    case "true" => None
+  }
+  val sparkExecutorMemory = sparkConfig.getString("executor-memory")
+  val sparkCleanerTtl = sparkConfig.getString("cleaner-ttl")
   val sparkStreamingBatchInterval = sparkConfig.getInt("streaming-batch-interval")
   val sparkCheckpointDir = sparkConfig.getString("checkpoint-dir")
-  val sparkMesosExecutorHome= sparkConfig.getString("mesos.executor-home")
+  val sparkEventLogDir = sparkConfig.getString("event-log-dir")
+  val sparkEventLogEnabled = sparkConfig.getString("event-log-enabled")
 
   val cassandraConfig = config.getConfig("cassandra")
   val cassandraLocationKeyspace = cassandraConfig.getString("keyspace")

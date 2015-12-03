@@ -37,9 +37,9 @@ class HttpQueryActor(spark: ActorRef, config : QueryApiConfig) extends Actor wit
   val routes = {
     logRequestResult("akka-http-microservice") {
       path("top-k-query") {
-        get {
+        post {
           entity(as[TopKLocationQuery]) { topKLocation =>
-            log.info(s"Querying {} top {} location.", topKLocation.msisdn,topKLocation.k )
+            log.info("Querying {} top {} location.", topKLocation.msisdn,topKLocation.k )
             val futureResponse = spark ? topKLocation
             complete {
               Await.result(futureResponse, timeout.duration).asInstanceOf[TopKLocationResponse]
@@ -47,7 +47,7 @@ class HttpQueryActor(spark: ActorRef, config : QueryApiConfig) extends Actor wit
           } ~
           entity(as[List[TopKLocationQuery]]) { topKLocationList =>
             topKLocationList.foreach { topKLocation =>
-              log.info(s"Querying {} top {} location.", topKLocation.msisdn,topKLocation.k )
+              log.info("Querying {} top {} location.", topKLocation.msisdn,topKLocation.k )
               spark ! topKLocation
             }
             complete {

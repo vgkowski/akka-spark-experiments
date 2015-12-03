@@ -35,6 +35,22 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
     .set("spark.cassandra.connection.host", config.cassandraHosts)
     .set("spark.cleaner.ttl", config.sparkCleanerTtl.toString)
     .set("spark.mesos.executor.home", config.sparkMesosExecutorHome)
+    .set("spark.driver.cores", config.sparkDriverCores)
+    .set("spark.driver.memory", config.sparkDriverMemory)
+    .set("spark.mesos.coarse",config.sparkMesosCoarse)
+    .set("spark.executor.memory",config.sparkExecutorMemory)
+    .set(
+      config.sparkMesosCoarse match{
+        case "true" => "spark.cores.max"
+        case "false" => "spark.mesosExecutor.cores"
+      },
+      config.sparkMesosCoarse match{
+        case "true" => config.sparkMesosCoresMax.get
+        case "false" => config.sparkMesosExecutorCores.get
+      }
+    )
+    .set("spark.jars",config.sparkJars)
+
 
   /** Creates the Spark Streaming context. */
   protected val ssc = new StreamingContext(sparkConf, Milliseconds(config.sparkStreamingBatchInterval))
@@ -123,6 +139,6 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
     context.actorOf(BalancingPool(1).props(
       Props(new HttpQueryActor(router,config))), "http-query")
 
-    log.info("Starting data ingestion on {}.", cluster.selfAddress)
+    log.info("Starting request listening on {}.", cluster.selfAddress)
   }
 }

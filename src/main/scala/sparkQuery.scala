@@ -24,7 +24,7 @@ class SparkQueryActor (config: QueryApiConfig,ssc: StreamingContext) extends Act
 
     ssc.cassandraTable[(Double,Double)](config.cassandraLocationKeyspace, config.cassandraLocationTable)
       .select("latitude","longitude")
-      .where("msisdn=? AND cdrtype=? AND datetime > ? AND datetime < ?", query.msisdn, query.cdrType,
+      .where("msisdn=? AND cdr_type=? AND date_time > ? AND date_time < ?", query.msisdn, query.cdrType,
         ApiUtils.stringToEpoch(query.startTime), ApiUtils.stringToEpoch(query.endTime))
       .collectAsync().map(toTopK) pipeTo requester
   }
