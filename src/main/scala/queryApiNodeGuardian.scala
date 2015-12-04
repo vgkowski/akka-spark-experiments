@@ -128,16 +128,14 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
 
   //cluster.joinSeedNodes(Vector(cluster.selfAddress))
 
-  // launch the kafka actors
-  val router = context.actorOf(BalancingPool(1).props(
-    Props(new SparkQueryActor(config,ssc))), "spark-query")
+  // launch the spark actors
+  val spark = context.actorOf(Props(classOf[SparkQueryActor],config,ssc), "spark-query")
 
-  // launch the http actors
+  // launch the http actors after the spark actor is initialized
   cluster registerOnMemberUp {
-    /* As http data is received, publishes to Kafka. */
+    /* As http data is received, send query to spark. */
     log.info(s"name of the actorsystem for http receiver {}",context.system.name)
-    context.actorOf(BalancingPool(1).props(
-      Props(new HttpQueryActor(router,config))), "http-query")
+    context.actorOf(Props(classOf[HttpQueryActor],spark,config), "http-query")
 
     log.info("Starting request listening on {}.", cluster.selfAddress)
   }
