@@ -14,7 +14,7 @@ import scala.util.control.NonFatal
 import scala.concurrent.duration._
 
 import org.apache.spark.SparkConf
-import org.apache.spark.streaming._
+import org.apache.spark._
 
 import akka.cluster.seed._
 
@@ -33,8 +33,11 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
   protected val sparkConf = new SparkConf().setAppName(getClass.getSimpleName)
     .setMaster(config.sparkMaster)
     .set("spark.cassandra.connection.host", config.cassandraHosts)
+    .set("spark.cassandra.auth.username", config.cassandraAuthUsername)
+    .set("spark.cassandra.auth.password", config.cassandraAuthPassword)
     .set("spark.cleaner.ttl", config.sparkCleanerTtl.toString)
     .set("spark.mesos.executor.home", config.sparkMesosExecutorHome)
+    .set("spark.default.parallelism", config.sparkDefaultParallelism)
     .set("spark.driver.cores", config.sparkDriverCores)
     .set("spark.driver.memory", config.sparkDriverMemory)
     .set("spark.mesos.coarse",config.sparkMesosCoarse)
@@ -53,7 +56,7 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
 
 
   /** Creates the Spark Streaming context. */
-  protected val ssc = new StreamingContext(sparkConf, Milliseconds(config.sparkStreamingBatchInterval))
+  protected val sc = new SparkContext(sparkConf) //, Milliseconds(config.sparkStreamingBatchInterval))
 
   /** subscribe to cluster changes, re-subscribe when restart. */
   override def preStart(): Unit = {
@@ -105,8 +108,8 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
     log.info(s"Node is transitioning from 'uninitialized' to 'initialized'")
     context.system.eventStream.publish(NodeInitialized)
 
-    ssc.checkpoint(config.sparkCheckpointDir)
-    ssc.start()
+    //ssc.checkpoint(config.sparkCheckpointDir)
+    //ssc.start()
 
     //context become initialized
   }
@@ -129,7 +132,7 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
   //cluster.joinSeedNodes(Vector(cluster.selfAddress))
 
   // launch the spark actors
-  val spark = context.actorOf(Props(classOf[SparkQueryActor],config,ssc), "spark-query")
+  val spark = context.actorOf(Props(classOf[SparkQueryActor],config,sc), "spark-query")
 
   // launch the http actors after the spark actor is initialized
   cluster registerOnMemberUp {

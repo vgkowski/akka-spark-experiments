@@ -37,10 +37,10 @@ class QueryApiConfig(path :String) {
   }
   val sparkExecutorMemory = sparkConfig.getString("executor-memory")
   val sparkCleanerTtl = sparkConfig.getString("cleaner-ttl")
-  val sparkStreamingBatchInterval = sparkConfig.getInt("streaming-batch-interval")
   val sparkCheckpointDir = sparkConfig.getString("checkpoint-dir")
   val sparkEventLogDir = sparkConfig.getString("event-log-dir")
   val sparkEventLogEnabled = sparkConfig.getString("event-log-enabled")
+  val sparkDefaultParallelism = sparkConfig.getString("default-parallelism")
 
   val cassandraConfig = config.getConfig("cassandra")
   val cassandraLocationKeyspace = cassandraConfig.getString("keyspace")
@@ -79,7 +79,7 @@ sealed trait ReactivePlatformEvent extends Serializable
 
 case class TopKLocationQuery(k: Int, msisdn: String, cdrType: String, startTime: String, endTime: String) extends ReactivePlatformEvent
 
-case class TopKLocationResponse(k: Int, msisdn: String, cdrType: String, startTime: String, endTime: String, locations : Seq[(Double,Double)])
+case class TopKLocationResponse(k: Int, msisdn: String, cdrType: String, startTime: String, endTime: String, locations : Seq[((Double,Double),Double)])
   extends ReactivePlatformEvent
 
 object QueryApiJsonProtocol extends DefaultJsonProtocol{
