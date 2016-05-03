@@ -15,11 +15,13 @@ import java.time.format._
 class QueryApiConfig(path :String) {
   val config= ConfigFactory.parseFile(new File(path))
 
+  // parse HTTP config
   val httpConfig = config.getConfig("http")
   val httpPort = httpConfig.getInt("port")
   val httpInterface = httpConfig.getString("interface")
   val httpTimeout = httpConfig.getInt("timeout")
 
+  // parse Spark config
   val sparkConfig = config.getConfig("spark")
   val sparkJars = sparkConfig.getString("jars")
   val sparkMaster = sparkConfig.getString("master")
@@ -42,9 +44,8 @@ class QueryApiConfig(path :String) {
   val sparkEventLogEnabled = sparkConfig.getString("event-log-enabled")
   val sparkDefaultParallelism = sparkConfig.getString("default-parallelism")
 
+  // parse cassandra config
   val cassandraConfig = config.getConfig("cassandra")
-  val cassandraLocationKeyspace = cassandraConfig.getString("keyspace")
-  val cassandraLocationTable = cassandraConfig.getString("table")
   val cassandraHosts = cassandraConfig.getString("cassandraHosts")
   val cassandraAuthUsername = cassandraConfig.getString("auth-username")
   val cassandraAuthPassword = cassandraConfig.getString("auth-password")
@@ -58,7 +59,6 @@ class QueryApiConfig(path :String) {
   val cassandraReadSplitSize = cassandraConfig.getInt("read.split-size")
   val cassandraWriteParallelismLevel = cassandraConfig.getInt("write.parallelism-level")
   val cassandraWriteBatchSizeBytes = cassandraConfig.getInt("write.batch-size-bytes")
-
   val cassandraWriteBatchSizeRows: Option[Int] = {
     val NumberPattern = "([0-9]+)".r
     cassandraConfig.getString("write.batch-size-rows") match {
@@ -72,7 +72,18 @@ class QueryApiConfig(path :String) {
   val cassandraWriteConsistencyLevel = ConsistencyLevel.valueOf(cassandraConfig.getString("write.consistency-level"))
   val cassandraDefaultMeasuredInsertsCount = cassandraConfig.getInt("write.default-measured-inserts-count")
 
-  val akkaConfig = ConfigFactory.parseString(s"akka.remote.netty.tcp.port = 0")
+  // parse Akka settings
+  val akkaConfig = config.getConfig("akka")
+  val akkaRemotePort = akkaConfig.getString("remote.netty.tcp.port")
+  val akkaSupervisorNbRetries = akkaConfig.getInt("max-nb-retries")
+
+  // parse application settings
+  val appConfig = config.getConfig("application")
+  val hourZoneOffset = appConfig.getInt("hour-zone-offset")
+  val topKLocationKeyspace = appConfig.getString("data-source.top-k-location.keyspace")
+  val topKLocationTable = appConfig.getString("data-source.top-k-location.table")
+  val usageKPIKeyspace = appConfig.getString("data-source.usage-kpi.keyspace")
+  val usageKPITable = appConfig.getString("data-source.usage-kpi.table")
 }
 
 sealed trait ReactivePlatformEvent extends Serializable
@@ -82,14 +93,29 @@ case class TopKLocationQuery(k: Int, msisdn: String, cdrType: String, startTime:
 case class TopKLocationResponse(k: Int, msisdn: String, cdrType: String, startTime: String, endTime: String, locations : Seq[((Double,Double),Double)])
   extends ReactivePlatformEvent
 
+case class UsageKPIQuery(msisdn: String, cdrType: String, startTime: String, endTime: String) extends ReactivePlatformEvent
+
+case class UsageKPIResponse(msisdn: String,
+                            cdrType: String,
+                            startTime: String,
+                            endTime: String,
+                            nbEvents:Int,
+                            nbEventsPerMinute: Double,
+                            nbDistinctPeer: Long,
+                            sumDuration:Int,
+                            averageDuration: Int
+                           ) extends ReactivePlatformEvent
+
 object QueryApiJsonProtocol extends DefaultJsonProtocol{
   implicit val topKLocationQueryFormat = jsonFormat5(TopKLocationQuery)
   implicit val topKLocationResponseFormat = jsonFormat6(TopKLocationResponse)
+  implicit val usageKPIqueryFormat = jsonFormat4(UsageKPIQuery)
+  implicit val usageKPIResponseFormat = jsonFormat9(UsageKPIResponse)
 }
 
 object ApiUtils {
-  def stringToEpoch(stringDate: String): Long = {
-    LocalDateTime.parse(stringDate.replace(' ', 'T')).toInstant(ZoneOffset.ofHours(0)).toEpochMilli()
+  def stringToEpoch(stringDate: String,offset:Int =0): Long = {
+    LocalDateTime.parse(stringDate.replace(' ', 'T')).toInstant(ZoneOffset.ofHours(offset)).toEpochMilli()
   }
 
   def epochToString(epoch: Long): String = {

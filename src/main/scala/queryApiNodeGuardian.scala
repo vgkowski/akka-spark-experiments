@@ -4,8 +4,9 @@ import akka.actor.SupervisorStrategy.{Escalate, Restart, Stop}
 import akka.actor._
 import akka.routing.BalancingPool
 import akka.util.Timeout
-import akka.cluster.{Member, Metric, NodeMetrics, Cluster}
-import akka.cluster.ClusterEvent._
+import akka.cluster.{Member, Cluster}
+import akka.cluster.ClusterEvent.{ClusterDomainEvent, MemberEvent, MemberRemoved, MemberUp, UnreachableMember}
+import akka.cluster.metrics._
 
 import scala.concurrent.Future
 //import scala.concurrent.ExecutionContext.Implicits.global
@@ -27,6 +28,7 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
 
   import SupervisorStrategy._
   import akka.pattern.gracefulStop
+  import context.dispatcher
 
   val cluster = Cluster(context.system)
 
@@ -114,7 +116,7 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
     //context become initialized
   }
 
-  /*protected def gracefulShutdown(listener: ActorRef): Unit = {
+  protected def gracefulShutdown(listener: ActorRef): Unit = {
     implicit val timeout = Timeout(5.seconds)
     val status = Future.sequence(context.children.map(shutdown))
     listener ! status
@@ -127,18 +129,16 @@ final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with Acto
       case NonFatal(e) =>
         log.error("Error shutting down {}, cause {}", child.path, e.toString)
         Future(false)
-    }*/
-
-  //cluster.joinSeedNodes(Vector(cluster.selfAddress))
+    }
 
   // launch the spark actors
-  val spark = context.actorOf(Props(classOf[SparkQueryActor],config,sc), "spark-query")
+  val spark = context.actorOf(SparkQueryActor.props(config,sc), "spark-query")
 
   // launch the http actors after the spark actor is initialized
   cluster registerOnMemberUp {
     /* As http data is received, send query to spark. */
     log.info(s"name of the actorsystem for http receiver {}",context.system.name)
-    context.actorOf(Props(classOf[HttpQueryActor],spark,config), "http-query")
+    context.actorOf(HttpQueryActor.props(spark,config), "http-query")
 
     log.info("Starting request listening on {}.", cluster.selfAddress)
   }

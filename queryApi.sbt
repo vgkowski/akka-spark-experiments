@@ -1,8 +1,8 @@
 name         := "queryApi"
 
-organization := "com.reactivePlatform"
+organization := "com.orange.reactivePlatform"
 
-version      := "1.0"
+version      := "1.1"
 
 scalaVersion := "2.11.7"
 
@@ -10,19 +10,27 @@ enablePlugins(JavaAppPackaging)
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
+val akkaVersion="2.4.4"
+val kafkaVersion="0.9.0.1"
+val akkaSeedVersion="0.1.5"
+val sparkVersion="1.6.1"
+val sparkCassandraVersion= "1.6.0-M2"
+
 libraryDependencies ++= {
   Seq(
-    "com.typesafe.akka" % "akka-actor_2.11" % "2.4.0",
-    "com.typesafe.akka" % "akka-stream-experimental_2.11" % "2.0-M1",
-    "com.typesafe.akka" % "akka-http-core-experimental_2.11" % "2.0-M1",
-    "com.typesafe.akka" % "akka-http-experimental_2.11" % "2.0-M1",
-    "com.typesafe.akka" % "akka-http-spray-json-experimental_2.11" % "2.0-M1",
-    "org.apache.kafka" % "kafka_2.11" % "0.8.2.2",
-    "com.datastax.spark" % "spark-cassandra-connector_2.11" % "1.5.0-M2",
-    "org.apache.spark" % "spark-streaming_2.11" % "1.5.2",
-    "com.typesafe.akka" % "akka-cluster_2.11" % "2.4.0",
-    "io.spray" % "spray-json_2.11" % "1.3.2",
-    "com.sclasen" % "akka-zk-cluster-seed_2.11" % "0.1.2"
+    "com.typesafe.akka" % "akka-actor_2.11" % akkaVersion,
+    "com.typesafe.akka" % "akka-stream_2.11" % akkaVersion,
+    "com.typesafe.akka" % "akka-http-core_2.11" % akkaVersion,
+    "com.typesafe.akka" % "akka-http-experimental_2.11" % akkaVersion,
+    "com.typesafe.akka" % "akka-http-spray-json-experimental_2.11" % akkaVersion,
+    "com.typesafe.akka" % "akka-cluster_2.11" % akkaVersion,
+    "com.typesafe.akka" % "akka-cluster-metrics_2.11" % akkaVersion,
+    "org.apache.kafka" % "kafka_2.11" % kafkaVersion,
+    "com.datastax.spark" % "spark-cassandra-connector_2.11" % sparkCassandraVersion,
+    "org.apache.spark" % "spark-streaming_2.11" % sparkVersion,
+    "org.apache.spark" % "spark-core_2.11" % sparkVersion,
+    "org.apache.spark" % "spark-sql_2.11" % sparkVersion,
+    "com.sclasen" % "akka-zk-cluster-seed_2.11" % akkaSeedVersion
   )
 }
 
