@@ -75,7 +75,7 @@ class QueryApiConfig(path :String) {
   // parse Akka settings
   val akkaConfig = config.getConfig("akka")
   val akkaRemotePort = akkaConfig.getString("remote.netty.tcp.port")
-  val akkaSupervisorNbRetries = akkaConfig.getInt("max-nb-retries")
+  val akkaSupervisorNbRetries = akkaConfig.getInt("supervision.max-nb-retries")
 
   // parse application settings
   val appConfig = config.getConfig("application")

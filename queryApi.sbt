@@ -6,6 +6,10 @@ version      := "1.1"
 
 scalaVersion := "2.11.7"
 
+unmanagedBase := baseDirectory.value / "custom_lib"
+
+unmanagedJars in Compile := (baseDirectory.value ** "*.jar").classpath
+
 enablePlugins(JavaAppPackaging)
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
@@ -26,7 +30,7 @@ libraryDependencies ++= {
     "com.typesafe.akka" % "akka-cluster_2.11" % akkaVersion,
     "com.typesafe.akka" % "akka-cluster-metrics_2.11" % akkaVersion,
     "org.apache.kafka" % "kafka_2.11" % kafkaVersion,
-    "com.datastax.spark" % "spark-cassandra-connector_2.11" % sparkCassandraVersion,
+    //"com.datastax.spark" % "spark-cassandra-connector_2.11" % sparkCassandraVersion,
     "org.apache.spark" % "spark-streaming_2.11" % sparkVersion,
     "org.apache.spark" % "spark-core_2.11" % sparkVersion,
     "org.apache.spark" % "spark-sql_2.11" % sparkVersion,

@@ -57,6 +57,26 @@ class HttpQueryActor(spark: ActorRef, config : QueryApiConfig) extends Actor wit
             }
           }
         }
+      } ~
+      path("usage-query") {
+        post {
+          entity(as[UsageKPIQuery]) { usageKPI =>
+            log.info("Querying {} top {} location.", usageKPI.msisdn )
+            val futureResponse = spark ? usageKPI
+            complete {
+              Await.result(futureResponse, timeout.duration).asInstanceOf[UsageKPIResponse]
+            }
+          } ~
+            entity(as[List[UsageKPIQuery]]) { usageKPIList =>
+              usageKPIList.foreach { usageKPI =>
+                log.info("Querying {} top {} location.", usageKPI.msisdn )
+                spark ! usageKPI
+              }
+              complete {
+                usageKPIList
+              }
+            }
+        }
       }
     }
   }

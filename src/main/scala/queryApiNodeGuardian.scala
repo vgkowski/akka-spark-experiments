@@ -23,6 +23,9 @@ sealed trait LifeCycleEvent extends Serializable
 case object OutputStreamInitialized extends LifeCycleEvent
 case object NodeInitialized extends LifeCycleEvent
 
+object QueryApiNodeGuardian {
+  def props(config :QueryApiConfig) : Props =  Props(new QueryApiNodeGuardian(config))
+}
 
 final class QueryApiNodeGuardian(config :QueryApiConfig) extends Actor with ActorLogging {
 
